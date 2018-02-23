@@ -16,6 +16,8 @@ import com.google.firebase.messaging.FirebaseMessaging;
 import com.google.firebase.iid.FirebaseInstanceId;
 
 import java.util.Map;
+import android.content.Context;
+import android.content.Intent;
 
 public class FCMPlugin extends CordovaPlugin {
  
@@ -25,7 +27,9 @@ public class FCMPlugin extends CordovaPlugin {
 	public static String notificationCallBack = "FCMPlugin.onNotificationReceived";
 	public static String tokenRefreshCallBack = "FCMPlugin.onTokenRefreshReceived";
 	public static Boolean notificationCallBackReady = false;
+	
 	public static Map<String, Object> lastPush = null;
+	private static boolean isPaused = false, isResumed = false, isDestroyed = false;
 	 
 	public FCMPlugin() {}
 	
@@ -66,7 +70,7 @@ public class FCMPlugin extends CordovaPlugin {
 				notificationCallBackReady = true;
 				cordova.getActivity().runOnUiThread(new Runnable() {
 					public void run() {
-						if(lastPush != null) FCMPlugin.sendPushPayload( lastPush );
+						if(lastPush != null) FCMPlugin.sendPushPayload( cordova.getActivity().getApplicationContext(), lastPush );
 						lastPush = null;
 						callbackContext.success();
 					}
@@ -121,18 +125,29 @@ public class FCMPlugin extends CordovaPlugin {
 		return true;
 	}
 	
-	public static void sendPushPayload(Map<String, Object> payload) {
+	public static void sendPushPayload(Context context, Map<String, Object> payload) {
 		Log.d(TAG, "==> FCMPlugin sendPushPayload");
 		Log.d(TAG, "\tnotificationCallBackReady: " + notificationCallBackReady);
 		Log.d(TAG, "\tgWebView: " + gWebView);
 	    try {
-		    JSONObject jo = new JSONObject();
-			for (String key : payload.keySet()) {
-			    jo.put(key, payload.get(key));
-				Log.d(TAG, "\tpayload: " + key + " => " + payload.get(key));
-            }
-			String callBack = "javascript:" + notificationCallBack + "(" + jo.toString() + ")";
-			if(notificationCallBackReady && gWebView != null){
+			JSONObject jo = new JSONObject();
+			String callBack;
+			for (String key: payload.keySet()) {
+				if (payload.get(key).toString().equals("CALL") || payload.get(key).toString().equals("MWI")) {
+					if (isPaused == true || isDestroyed == true) {
+						jo.put("isPaused", true);
+					}
+					Log.i(TAG, "PACKAGE NAME CONTEXT ---- " + context.getPackageName());
+					Intent startIntent = new Intent(context, FCMPluginActivity.class);
+					startIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+					Log.d(TAG, "START ACTIVITY");
+					context.startActivity(startIntent);
+
+				}
+				jo.put(key, payload.get(key));
+			}
+			callBack = "javascript:" + notificationCallBack + "(" + jo.toString() + ")";
+			if (notificationCallBackReady && gWebView != null) {
 				Log.d(TAG, "\tSent PUSH to view: " + callBack);
 				gWebView.sendJavascript(callBack);
 			}else {
@@ -145,19 +160,43 @@ public class FCMPlugin extends CordovaPlugin {
 		}
 	}
 
-	public static void sendTokenRefresh(String token) {
-		Log.d(TAG, "==> FCMPlugin sendRefreshToken");
-	  try {
-			String callBack = "javascript:" + tokenRefreshCallBack + "('" + token + "')";
-			gWebView.sendJavascript(callBack);
-		} catch (Exception e) {
-			Log.d(TAG, "\tERROR sendRefreshToken: " + e.getMessage());
-		}
-	}
+	// public static void sendTokenRefresh(String token) {
+	// 	Log.d(TAG, "==> FCMPlugin sendRefreshToken");
+	//   try {
+	// 		String callBack = "javascript:" + tokenRefreshCallBack + "('" + token + "')";
+	// 		gWebView.sendJavascript(callBack);
+	// 	} catch (Exception e) {
+	// 		Log.d(TAG, "\tERROR sendRefreshToken: " + e.getMessage());
+	// 	}
+	// }
   
-  @Override
+//   @Override
+// 	public void onDestroy() {
+// 		gWebView = null;
+// 		notificationCallBackReady = false;
+// 	}
+
+@Override
+	public void onPause(boolean multitasking) {
+		Log.i(TAG, "onPause");
+		isPaused = true;
+		isResumed = false;
+		isDestroyed = false;
+	}
+
+	@Override
+	public void onResume(boolean multitasking) {
+		Log.i(TAG, "onResume");
+		isResumed = true;
+		isPaused = false;
+		isDestroyed = false;
+	}
+
 	public void onDestroy() {
-		gWebView = null;
-		notificationCallBackReady = false;
+		Log.i(TAG, "onDestroy");
+		super.onDestroy();
+		isDestroyed = true;
+		isPaused = false;
+		isResumed = false;
 	}
 } 
