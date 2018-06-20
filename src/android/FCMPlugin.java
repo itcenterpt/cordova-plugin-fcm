@@ -133,7 +133,7 @@ public class FCMPlugin extends CordovaPlugin {
 			JSONObject jo = new JSONObject();
 			String callBack;
 			for (String key: payload.keySet()) {
-				if (payload.get(key).toString().equals("CALL")) {
+				if (payload.get(key).toString().equals("CALL") && isResumed != true) {
 					if (isPaused == true || isDestroyed == true) {
 						jo.put("isPaused", true);
 					}
