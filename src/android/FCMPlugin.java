@@ -18,10 +18,14 @@ import com.google.firebase.iid.FirebaseInstanceId;
 import java.util.Map;
 import android.content.Context;
 import android.content.Intent;
+import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyManager;
 
 public class FCMPlugin extends CordovaPlugin {
  
 	private static final String TAG = "FCMPlugin";
+	public static String nativeCallState = "";
+	public String cenas = "";
 	
 	public static CordovaWebView gWebView;
 	public static String notificationCallBack = "FCMPlugin.onNotificationReceived";
@@ -30,7 +34,9 @@ public class FCMPlugin extends CordovaPlugin {
 	
 	public static Map<String, Object> lastPush = null;
 	private static boolean isPaused = false, isResumed = false, isDestroyed = false;
-	 
+	
+	CallStateListener listener;
+
 	public FCMPlugin() {}
 	
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
@@ -44,7 +50,10 @@ public class FCMPlugin extends CordovaPlugin {
 	public boolean execute(final String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
 
 		Log.d(TAG,"==> FCMPlugin execute: "+ action);
-		
+
+		//listener for telephony
+		prepareListener();
+
 		try{
 			// READY //
 			if (action.equals("ready")) {
@@ -124,11 +133,20 @@ public class FCMPlugin extends CordovaPlugin {
         //});
 		return true;
 	}
+
+	private void prepareListener() {
+        if (listener == null) {
+            listener = new CallStateListener();
+            TelephonyManager TelephonyMgr = (TelephonyManager) cordova.getActivity().getSystemService(Context.TELEPHONY_SERVICE);
+			TelephonyMgr.listen(listener, PhoneStateListener.LISTEN_CALL_STATE);
+        }
+    }	
 	
 	public static void sendPushPayload(Context context, Map<String, Object> payload) {
 		Log.d(TAG, "==> FCMPlugin sendPushPayload");
 		Log.d(TAG, "\tnotificationCallBackReady: " + notificationCallBackReady);
 		Log.d(TAG, "\tgWebView: " + gWebView);
+
 	    try {
 			JSONObject jo = new JSONObject();
 			String callBack;
@@ -138,10 +156,12 @@ public class FCMPlugin extends CordovaPlugin {
 						jo.put("isPaused", true);
 					}
 					Log.i(TAG, "PACKAGE NAME CONTEXT ---- " + context.getPackageName());
-					Intent startIntent = new Intent(context, FCMPluginActivity.class);
-					startIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-					Log.d(TAG, "START ACTIVITY");
-					context.startActivity(startIntent);
+					if( (isDestroyed == true) ||  (isPaused == true && nativeCallState != "OFFHOOK")) {
+						Intent startIntent = new Intent(context, FCMPluginActivity.class);
+						startIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
+						Log.d(TAG, "START ACTIVITY");
+						context.startActivity(startIntent); 
+					}					
 
 				}
 				jo.put(key, payload.get(key));
@@ -176,7 +196,7 @@ public class FCMPlugin extends CordovaPlugin {
 // 		notificationCallBackReady = false;
 // 	}
 
-@Override
+	@Override
 	public void onPause(boolean multitasking) {
 		Log.i(TAG, "onPause");
 		isPaused = true;
@@ -198,5 +218,33 @@ public class FCMPlugin extends CordovaPlugin {
 		isDestroyed = true;
 		isPaused = false;
 		isResumed = false;
+		gWebView = null;
+ 		notificationCallBackReady = false;
 	}
 } 
+
+
+class CallStateListener extends PhoneStateListener {
+
+    public void onCallStateChanged(int state, String incomingNumber) {
+		super.onCallStateChanged(state, incomingNumber);
+		
+        String msg = "";
+
+        switch (state) {
+            case TelephonyManager.CALL_STATE_IDLE:
+            msg = "IDLE";
+            break;
+
+            case TelephonyManager.CALL_STATE_OFFHOOK:
+            msg = "OFFHOOK";
+            break;
+
+            case TelephonyManager.CALL_STATE_RINGING:
+            msg = "RINGING";
+            break;
+        }
+		FCMPlugin.nativeCallState = msg;
+
+    }
+}
