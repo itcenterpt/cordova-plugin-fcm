@@ -156,13 +156,21 @@ public class FCMPlugin extends CordovaPlugin {
 						jo.put("isPaused", true);
 					}
 					Log.i(TAG, "PACKAGE NAME CONTEXT ---- " + context.getPackageName());
-					if( (isDestroyed == true) ||  (isPaused == true && nativeCallState != "OFFHOOK")) {
+					if (isDestroyed == true) {
+						Log.d(TAG, "STARTING ACTIVITY");
 						Intent startIntent = new Intent(context, FCMPluginActivity.class);
 						startIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-						Log.d(TAG, "START ACTIVITY");
 						context.startActivity(startIntent); 
+					}
+					else if (isPaused == true) {
+						if (nativeCallState != "OFFHOOK") {
+							Log.d(TAG, "RESUMING ACTIVITY");
+							Intent startIntent = new Intent(context, FCMPluginActivity.class);
+							startIntent.setAction(Intent.ACTION_MAIN);
+							startIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+							context.startActivity(startIntent);
+						}
 					}					
-
 				}
 				jo.put(key, payload.get(key));
 			}
