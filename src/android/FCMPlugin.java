@@ -151,6 +151,7 @@ public class FCMPlugin extends CordovaPlugin {
 			JSONObject jo = new JSONObject();
 			String callBack;
 			for (String key: payload.keySet()) {
+				Log.i(TAG, "payload.get(key) ---- " + payload.get(key).toString());
 				if (payload.get(key).toString().equals("CALL") && isResumed != true) {
 					if (isPaused == true || isDestroyed == true) {
 						jo.put("isPaused", true);
@@ -167,7 +168,7 @@ public class FCMPlugin extends CordovaPlugin {
 							Log.d(TAG, "RESUMING ACTIVITY");
 							Intent startIntent = new Intent(context, FCMPluginActivity.class);
 							startIntent.setAction(Intent.ACTION_MAIN);
-							startIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+							startIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 							context.startActivity(startIntent);
 						}
 					}					
