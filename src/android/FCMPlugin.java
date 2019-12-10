@@ -152,7 +152,7 @@ public class FCMPlugin extends CordovaPlugin {
 			String callBack;
 			for (String key: payload.keySet()) {
 				Log.i(TAG, "payload.get(key) ---- " + payload.get(key).toString());
-				if (payload.get(key).toString().equals("CALL") && isResumed != true) {
+				if ( (payload.get(key).toString().equals("CALL") || payload.get(key).toString().equals("VIDEO_CALL") ) && isResumed != true) {
 					if (isPaused == true || isDestroyed == true) {
 						jo.put("isPaused", true);
 					}
@@ -228,7 +228,7 @@ public class FCMPlugin extends CordovaPlugin {
 		isPaused = false;
 		isResumed = false;
 		gWebView = null;
- 		notificationCallBackReady = false;
+ 		//notificationCallBackReady = false;
 	}
 } 
 
