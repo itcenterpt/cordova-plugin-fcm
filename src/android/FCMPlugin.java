@@ -22,23 +22,19 @@ import android.telephony.PhoneStateListener;
 import android.telephony.TelephonyManager;
 
 public class FCMPlugin extends CordovaPlugin {
- 
 	private static final String TAG = "FCMPlugin";
 	public static String nativeCallState = "";
-	public String cenas = "";
-	
 	public static CordovaWebView gWebView;
 	public static String notificationCallBack = "FCMPlugin.onNotificationReceived";
 	public static String tokenRefreshCallBack = "FCMPlugin.onTokenRefreshReceived";
 	public static Boolean notificationCallBackReady = false;
-	
-	public static Map<String, Object> lastPush = null;
+	public static Map < String, Object > lastPush = null;
 	private static boolean isPaused = false, isResumed = false, isDestroyed = false;
-	
+
 	CallStateListener listener;
 
 	public FCMPlugin() {}
-	
+
 	public void initialize(CordovaInterface cordova, CordovaWebView webView) {
 		super.initialize(cordova, webView);
 		gWebView = webView;
@@ -46,40 +42,40 @@ public class FCMPlugin extends CordovaPlugin {
 		FirebaseMessaging.getInstance().subscribeToTopic("android");
 		FirebaseMessaging.getInstance().subscribeToTopic("all");
 	}
-	 
-	public boolean execute(final String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
 
-		Log.d(TAG,"==> FCMPlugin execute: "+ action);
+	public boolean execute(final String action, final JSONArray args, final CallbackContext callbackContext) throws JSONException {
+		Log.d(TAG, "==> FCMPlugin execute: " + action);
 
 		//listener for telephony
 		prepareListener();
 
-		try{
+		try {
 			// READY //
 			if (action.equals("ready")) {
-				//
 				callbackContext.success();
 			}
 			// GET TOKEN //
 			else if (action.equals("getToken")) {
+				Log.d(TAG, "==> getToken");
 				cordova.getActivity().runOnUiThread(new Runnable() {
 					public void run() {
-						try{
+						try {
 							String token = FirebaseInstanceId.getInstance().getToken();
-							callbackContext.success( FirebaseInstanceId.getInstance().getToken() );
-							Log.d(TAG,"\tToken: "+ token);
-						}catch(Exception e){
-							Log.d(TAG,"\tError retrieving token");
+							callbackContext.success(FirebaseInstanceId.getInstance().getToken());
+							Log.d(TAG, "\tToken: " + token);
+						} catch (Exception e) {
+							Log.d(TAG, "\tError retrieving token");
 						}
 					}
 				});
 			}
 			// NOTIFICATION CALLBACK REGISTER //
 			else if (action.equals("registerNotification")) {
+				Log.d(TAG, "==> registerNotification");
 				notificationCallBackReady = true;
 				cordova.getActivity().runOnUiThread(new Runnable() {
 					public void run() {
-						if(lastPush != null) FCMPlugin.sendPushPayload( cordova.getActivity().getApplicationContext(), lastPush );
+						if (lastPush != null) FCMPlugin.sendPushPayload(cordova.getActivity().getApplicationContext(), lastPush);
 						lastPush = null;
 						callbackContext.success();
 					}
@@ -87,72 +83,72 @@ public class FCMPlugin extends CordovaPlugin {
 			}
 			// UN/SUBSCRIBE TOPICS //
 			else if (action.equals("subscribeToTopic")) {
+				Log.d(TAG, "==> subscribeToTopic");
 				cordova.getThreadPool().execute(new Runnable() {
 					public void run() {
-						try{
-							FirebaseMessaging.getInstance().subscribeToTopic( args.getString(0) );
+						try {
+							FirebaseMessaging.getInstance().subscribeToTopic(args.getString(0));
 							callbackContext.success();
-						}catch(Exception e){
+						} catch (Exception e) {
 							callbackContext.error(e.getMessage());
 						}
 					}
 				});
-			}
-			else if (action.equals("unsubscribeFromTopic")) {
+			} else if (action.equals("unsubscribeFromTopic")) {
+				Log.d(TAG, "==> unsubscribeFromTopic");
 				cordova.getThreadPool().execute(new Runnable() {
 					public void run() {
-						try{
-							FirebaseMessaging.getInstance().unsubscribeFromTopic( args.getString(0) );
+						try {
+							FirebaseMessaging.getInstance().unsubscribeFromTopic(args.getString(0));
 							callbackContext.success();
-						}catch(Exception e){
+						} catch (Exception e) {
 							callbackContext.error(e.getMessage());
 						}
 					}
 				});
-			}
-			else{
+			} else {
 				callbackContext.error("Method not found");
 				return false;
 			}
-		}catch(Exception e){
+		} catch (Exception e) {
 			Log.d(TAG, "ERROR: onPluginAction: " + e.getMessage());
 			callbackContext.error(e.getMessage());
 			return false;
 		}
-		
+
 		//cordova.getThreadPool().execute(new Runnable() {
 		//	public void run() {
 		//	  //
 		//	}
 		//});
-		
+
 		//cordova.getActivity().runOnUiThread(new Runnable() {
-        //    public void run() {
-        //      //
-        //    }
-        //});
+		//    public void run() {
+		//      //
+		//    }
+		//});
 		return true;
 	}
 
 	private void prepareListener() {
-        if (listener == null) {
-            listener = new CallStateListener();
-            TelephonyManager TelephonyMgr = (TelephonyManager) cordova.getActivity().getSystemService(Context.TELEPHONY_SERVICE);
+		if (listener == null) {
+			listener = new CallStateListener();
+			TelephonyManager TelephonyMgr = (TelephonyManager) cordova.getActivity().getSystemService(Context.TELEPHONY_SERVICE);
 			TelephonyMgr.listen(listener, PhoneStateListener.LISTEN_CALL_STATE);
-        }
-    }	
-	
-	public static void sendPushPayload(Context context, Map<String, Object> payload) {
+		}
+	}
+
+	public static void sendPushPayload(Context context, Map < String, Object > payload) {
 		Log.d(TAG, "==> FCMPlugin sendPushPayload");
 		Log.d(TAG, "\tnotificationCallBackReady: " + notificationCallBackReady);
 		Log.d(TAG, "\tgWebView: " + gWebView);
 
-	    try {
+		try {
 			JSONObject jo = new JSONObject();
 			String callBack;
 			for (String key: payload.keySet()) {
 				Log.i(TAG, "payload.get(key) ---- " + payload.get(key).toString());
-				if ( (payload.get(key).toString().equals("CALL") || payload.get(key).toString().equals("VIDEO_CALL") ) && isResumed != true) {
+				if ((payload.get(key).toString().equals("CALL") || payload.get(key).toString().equals("VIDEO_CALL")) && isResumed != true) {
 					if (isPaused == true || isDestroyed == true) {
 						jo.put("isPaused", true);
 					}
@@ -161,9 +157,8 @@ public class FCMPlugin extends CordovaPlugin {
 						Log.d(TAG, "STARTING ACTIVITY");
 						Intent startIntent = new Intent(context, FCMPluginActivity.class);
 						startIntent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK);
-						context.startActivity(startIntent); 
-					}
-					else if (isPaused == true) {
+						context.startActivity(startIntent);
+					} else if (isPaused == true) {
 						if (nativeCallState != "OFFHOOK") {
 							Log.d(TAG, "RESUMING ACTIVITY");
 							Intent startIntent = new Intent(context, FCMPluginActivity.class);
@@ -171,7 +166,7 @@ public class FCMPlugin extends CordovaPlugin {
 							startIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 							context.startActivity(startIntent);
 						}
-					}					
+					}
 				}
 				jo.put(key, payload.get(key));
 			}
@@ -179,7 +174,7 @@ public class FCMPlugin extends CordovaPlugin {
 			if (notificationCallBackReady && gWebView != null) {
 				Log.d(TAG, "\tSent PUSH to view: " + callBack);
 				gWebView.sendJavascript(callBack);
-			}else {
+			} else {
 				Log.d(TAG, "\tView not ready. SAVED NOTIFICATION: " + callBack);
 				lastPush = payload;
 			}
@@ -189,21 +184,21 @@ public class FCMPlugin extends CordovaPlugin {
 		}
 	}
 
-	// public static void sendTokenRefresh(String token) {
-	// 	Log.d(TAG, "==> FCMPlugin sendRefreshToken");
-	//   try {
-	// 		String callBack = "javascript:" + tokenRefreshCallBack + "('" + token + "')";
-	// 		gWebView.sendJavascript(callBack);
-	// 	} catch (Exception e) {
-	// 		Log.d(TAG, "\tERROR sendRefreshToken: " + e.getMessage());
+	public static void sendTokenRefresh(String token) {
+		Log.d(TAG, "==> FCMPlugin sendRefreshToken");
+		try {
+			String callBack = "javascript:" + tokenRefreshCallBack + "('" + token + "')";
+			gWebView.sendJavascript(callBack);
+		} catch (Exception e) {
+			Log.d(TAG, "\tERROR sendRefreshToken: " + e.getMessage());
+		}
+	}
+
+	//   @Override
+	// 	public void onDestroy() {
+	// 		gWebView = null;
+	// 		notificationCallBackReady = false;
 	// 	}
-	// }
-  
-//   @Override
-// 	public void onDestroy() {
-// 		gWebView = null;
-// 		notificationCallBackReady = false;
-// 	}
 
 	@Override
 	public void onPause(boolean multitasking) {
@@ -228,32 +223,30 @@ public class FCMPlugin extends CordovaPlugin {
 		isPaused = false;
 		isResumed = false;
 		gWebView = null;
- 		//notificationCallBackReady = false;
+		//notificationCallBackReady = false;
 	}
-} 
+}
 
 
 class CallStateListener extends PhoneStateListener {
-
-    public void onCallStateChanged(int state, String incomingNumber) {
+	public void onCallStateChanged(int state, String incomingNumber) {
 		super.onCallStateChanged(state, incomingNumber);
-		
-        String msg = "";
+		String msg = "";
 
-        switch (state) {
-            case TelephonyManager.CALL_STATE_IDLE:
-            msg = "IDLE";
-            break;
+		switch (state) {
+			case TelephonyManager.CALL_STATE_IDLE:
+				msg = "IDLE";
+				break;
 
-            case TelephonyManager.CALL_STATE_OFFHOOK:
-            msg = "OFFHOOK";
-            break;
+			case TelephonyManager.CALL_STATE_OFFHOOK:
+				msg = "OFFHOOK";
+				break;
 
-            case TelephonyManager.CALL_STATE_RINGING:
-            msg = "RINGING";
-            break;
-        }
+			case TelephonyManager.CALL_STATE_RINGING:
+				msg = "RINGING";
+				break;
+		}
 		FCMPlugin.nativeCallState = msg;
 
-    }
+	}
 }
